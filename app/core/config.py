@@ -19,6 +19,12 @@ class Settings(BaseSettings):
     ssl_enabled: bool = False
     ssl_certfile: str | None = None
     ssl_keyfile: str | None = None
+    cors_allowed_origins: list[str] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
     max_video_frames: int = Field(default=300, ge=1)
     max_frame_bytes: int = Field(default=5_000_000, ge=1)
     max_video_bytes: int = Field(default=100_000_000, ge=1)

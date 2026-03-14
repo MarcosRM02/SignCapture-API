@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "signcapture-api"
+version = "0.1.0"
+description = "API modular para recepcion y procesamiento de frames y videos con MediaPipe."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "fastapi>=0.116.0,<1.0.0",
+  "uvicorn[standard]>=0.35.0,<1.0.0",
+  "python-multipart>=0.0.20,<1.0.0",
+  "pydantic-settings>=2.10.0,<3.0.0",
+  "numpy>=1.26.0,<2.0.0",
+  "mediapipe>=0.10.21,<0.10.30",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.4.0,<9.0.0",
+  "httpx>=0.28.0,<1.0.0",
+  "ruff>=0.12.0,<1.0.0",
+]
+
+[project.scripts]
+start = "app.main:run"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["B008"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

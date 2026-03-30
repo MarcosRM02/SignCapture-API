@@ -11,9 +11,10 @@ from app.services.media import MediaPipeHandLandmarkService
 def get_inference_controller() -> InferenceController:
     """Construye y cachea el controlador principal de inferencia."""
 
+    settings = get_settings()
     service = InferenceService(
-        settings=get_settings(),
+        settings=settings,
         landmark_service=MediaPipeHandLandmarkService(),
-        classifier_service=GestureClassifierService(),
+        classifier_service=GestureClassifierService(settings=settings),
     )
     return InferenceController(service=service)

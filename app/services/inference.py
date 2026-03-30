@@ -40,13 +40,16 @@ class InferenceService:
         payload = await upload.read()
         self._validate_size(payload, self._settings.max_frame_bytes, "frame")
         extracted = self._landmark_service.extract_from_image_bytes(payload)
-        prediction = self._classifier_service.predict(extracted)
+        classification = self._classifier_service.predict(extracted)
         return InferenceResponse(
-            prediction=prediction,
+            prediction=classification.prediction,
+            feedback=classification.feedback,
             metadata=InferenceMetadata(
                 source_type="frame",
                 processed_frames=1,
                 hand_detected_frames=len(extracted),
+                prediction_consistency=classification.consistency,
+                model_name=self._classifier_service.model_name,
             ),
             landmarks=[frame.landmarks for frame in extracted],
         )
@@ -72,13 +75,16 @@ class InferenceService:
             upload.file,
             max_frames=self._settings.max_video_frames,
         )
-        prediction = self._classifier_service.predict(extraction.extracted_frames)
+        classification = self._classifier_service.predict(extraction.extracted_frames)
         return InferenceResponse(
-            prediction=prediction,
+            prediction=classification.prediction,
+            feedback=classification.feedback,
             metadata=InferenceMetadata(
                 source_type="video",
                 processed_frames=extraction.processed_frames,
                 hand_detected_frames=len(extraction.extracted_frames),
+                prediction_consistency=classification.consistency,
+                model_name=self._classifier_service.model_name,
             ),
             landmarks=[frame.landmarks for frame in extraction.extracted_frames],
         )

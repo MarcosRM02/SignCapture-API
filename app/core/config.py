@@ -1,7 +1,11 @@
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+DEFAULT_MODEL_PATH = Path(__file__).resolve().parents[1] / "models" / "xgboost_asl.pkl"
+DEFAULT_MODEL_CLASS_LABELS = "A,B,C,D,E,F,G,H,I,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y"
 
 
 class Settings(BaseSettings):
@@ -28,8 +32,22 @@ class Settings(BaseSettings):
     max_video_frames: int = Field(default=300, ge=1)
     max_frame_bytes: int = Field(default=5_000_000, ge=1)
     max_video_bytes: int = Field(default=100_000_000, ge=1)
+    model_path: Path = DEFAULT_MODEL_PATH
+    model_top_k: int = Field(default=3, ge=1, le=10)
+    prediction_warning_threshold: float = Field(default=0.45, ge=0.0, le=1.0)
+    prediction_success_threshold: float = Field(default=0.75, ge=0.0, le=1.0)
+    model_class_labels_csv: str = DEFAULT_MODEL_CLASS_LABELS
 
     model_config = SettingsConfigDict(env_file=".env", env_prefix="SIGNCAPTURE_")
+
+    def get_model_class_labels(self) -> list[str]:
+        """Devuelve las etiquetas configuradas para resolver las clases del modelo."""
+
+        return [
+            label.strip().upper()
+            for label in self.model_class_labels_csv.split(",")
+            if label.strip()
+        ]
 
 
 @lru_cache

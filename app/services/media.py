@@ -44,6 +44,14 @@ class MediaPipeHandLandmarkService:
                 "Reinstala una version compatible del proyecto."
             ) from exc
 
+        import threading
+        self._lock = threading.Lock()
+        self._hands_processor = self._mp_hands.Hands(
+            static_image_mode=True,
+            max_num_hands=1,
+            min_detection_confidence=0.5,
+        )
+
     def _configure_mediapipe_resource_path(self) -> None:
         """Ajusta la ruta interna de recursos para entornos Windows con rutas no ASCII."""
 
@@ -92,8 +100,10 @@ class MediaPipeHandLandmarkService:
         image = cv2.imdecode(np.frombuffer(image_bytes, dtype=np.uint8), cv2.IMREAD_COLOR)
         if image is None:
             raise ValueError("No se pudo decodificar la imagen enviada.")
-        with self._build_hands_processor() as hands:
-            frame_landmarks = self._extract_from_bgr_frame(image, frame_index=0, hands=hands)
+        
+        with self._lock:
+            frame_landmarks = self._extract_from_bgr_frame(image, frame_index=0, hands=self._hands_processor)
+            
         return [frame_landmarks] if frame_landmarks else []
 
     def extract_from_video_file(
@@ -126,7 +136,7 @@ class MediaPipeHandLandmarkService:
         extracted: list[ExtractedFrameLandmarks] = []
         frame_index = 0
         try:
-            with self._build_hands_processor() as hands:
+            with self._lock:
                 while frame_index < max_frames:
                     ok, frame = capture.read()
                     if not ok:
@@ -134,7 +144,7 @@ class MediaPipeHandLandmarkService:
                     frame_landmarks = self._extract_from_bgr_frame(
                         frame,
                         frame_index=frame_index,
-                        hands=hands,
+                        hands=self._hands_processor,
                     )
                     if frame_landmarks:
                         extracted.append(frame_landmarks)

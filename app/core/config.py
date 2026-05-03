@@ -28,6 +28,7 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "*",
     ]
     max_video_frames: int = Field(default=300, ge=1)
     max_frame_bytes: int = Field(default=5_000_000, ge=1)

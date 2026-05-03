@@ -1,0 +1,21 @@
+# Usa una imagen oficial ligera de Python
+FROM python:3.10-slim
+
+# Establece el directorio de trabajo
+WORKDIR /app
+
+# Instala dependencias del sistema requeridas (por ejemplo libgl1 para OpenCV/MediaPipe)
+RUN apt-get update && apt-get install -y libgl1 libglib2.0-0 && rm -rf /var/lib/apt/lists/*
+
+# Copia los archivos del proyecto para instalar las dependencias
+COPY pyproject.toml README.md ./
+COPY app ./app
+
+# Instala la API y sus dependencias (usando el pyproject.toml)
+RUN pip install --no-cache-dir .
+
+# Exponemos el puerto para acceder a la API
+EXPOSE 8000
+
+# Arranca la API REST usando el puerto que asigne Render (o 8000 por defecto)
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}

@@ -1,0 +1,35 @@
+services:
+  train:
+    build:
+      context: ../SignCapture-ModelTests
+      dockerfile: Dockerfile.train
+    container_name: signcapture_train
+    volumes:
+      # Montamos la carpeta local ./mis_modelos para guardar el modelo
+      - ./mis_modelos:/app/model_storage
+      # Montamos la carpeta local de datos donde se encuentran las imágenes/datasets. 
+      # Ajusta la ruta izquierda ('./data') según dónde tengas tus datos en local.
+      - ./data:/app/data
+    environment:
+      # Ruta de salida del modelo dictada por nosotros en el volumen
+      - MODEL_OUTPUT_PATH=/app/model_storage/xgboost_asl.pkl
+      # Variable que usa SignCapture-ModelTests para saber dónde está su root (y así buscar en /app/data)
+      - SIGNCAPTURE_ROOT=/app
+
+  infer:
+    build:
+      context: ./SignCapture-API
+      dockerfile: Dockerfile.infer
+    container_name: signcapture_infer
+    ports:
+      - "8000:8000"
+    volumes:
+      # Montamos la MISMA carpeta local para poder leer el modelo que generó el contenedor train
+      - ./mis_modelos:/app/model_storage
+    environment:
+      # Variable de entorno de la API (por pydantic_settings)
+      - SIGNCAPTURE_MODEL_PATH=/app/model_storage/xgboost_asl.pkl
+    depends_on:
+      train:
+        # Inferencia espera a que el entrenamiento termine exitosamente
+        condition: service_completed_successfully

@@ -1,0 +1,78 @@
+name: Retrain model pipeline
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * 1"
+
+permissions:
+  contents: write
+
+jobs:
+  retrain-model:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout API repository
+        uses: actions/checkout@v4
+
+      - name: Checkout ModelTests repository
+        uses: actions/checkout@v4
+        with:
+          repository: MarcosRM02/SignCapture-ModelTests
+          path: SignCapture-ModelTests
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install training dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r SignCapture-ModelTests/requirements.txt
+
+      - name: Download Gold datasets
+        env:
+          GOLD_TRAIN_CSV_URL: ${{ secrets.GOLD_TRAIN_CSV_URL }}
+          GOLD_VAL_CSV_URL: ${{ secrets.GOLD_VAL_CSV_URL }}
+          GOLD_TEST_CSV_URL: ${{ secrets.GOLD_TEST_CSV_URL }}
+        run: |
+          test -n "$GOLD_TRAIN_CSV_URL" || { echo "Missing GOLD_TRAIN_CSV_URL secret"; exit 1; }
+          test -n "$GOLD_VAL_CSV_URL" || { echo "Missing GOLD_VAL_CSV_URL secret"; exit 1; }
+          test -n "$GOLD_TEST_CSV_URL" || { echo "Missing GOLD_TEST_CSV_URL secret"; exit 1; }
+          mkdir -p data/gold tmp
+          curl -L "$GOLD_TRAIN_CSV_URL" -o data/gold/train.csv
+          curl -L "$GOLD_VAL_CSV_URL" -o data/gold/val.csv
+          curl -L "$GOLD_TEST_CSV_URL" -o data/gold/test.csv
+
+      - name: Retrain and evaluate candidate model
+        env:
+          FEEDBACK_DATABASE_URL: ${{ secrets.FEEDBACK_DATABASE_URL }}
+          FEEDBACK_TABLE: ${{ vars.FEEDBACK_TABLE }}
+          SIGNCAPTURE_ROOT: ${{ github.workspace }}
+        run: |
+          python SignCapture-ModelTests/retrain.py \
+            --model xgboost \
+            --gold-dir "$GITHUB_WORKSPACE/data/gold" \
+            --existing-model-path "$GITHUB_WORKSPACE/app/models/xgboost_asl.pkl" \
+            --candidate-model-path "$GITHUB_WORKSPACE/tmp/xgboost_asl_candidate.pkl" \
+            --promoted-model-path "$GITHUB_WORKSPACE/app/models/xgboost_asl.pkl" \
+            --summary-path "$GITHUB_WORKSPACE/tmp/retrain-summary.json" \
+            --db-dsn "$FEEDBACK_DATABASE_URL" \
+            --feedback-table "${FEEDBACK_TABLE:-prediction_feedback}"
+
+      - name: Show retraining summary
+        run: cat tmp/retrain-summary.json
+
+      - name: Commit promoted model
+        run: |
+          if git diff --quiet -- app/models/xgboost_asl.pkl; then
+            echo "No promoted model changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/models/xgboost_asl.pkl
+          git commit -m "chore: update retrained ASL model"
+          git push

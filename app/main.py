@@ -1,15 +1,25 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
 from app.routes.api import api_router
+from app.core.observability import start_observability_tasks
 
 settings = get_settings()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Iniciar tareas en segundo plano (Auto-ping y Métricas de Sistema)
+    start_observability_tasks()
+    yield
+    # Limpieza (si fuera necesario)
 
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
     description="API para procesar frames y videos con un pipeline de landmarks y clasificacion.",
+    lifespan=lifespan,
 )
 app.add_middleware(
     CORSMiddleware,

@@ -38,6 +38,12 @@ class Settings(BaseSettings):
     prediction_warning_threshold: float = Field(default=0.45, ge=0.0, le=1.0)
     prediction_success_threshold: float = Field(default=0.75, ge=0.0, le=1.0)
     model_class_labels_csv: str = DEFAULT_MODEL_CLASS_LABELS
+    
+    # Observability & Alerts settings
+    telegram_bot_token: str = ""
+    telegram_chat_id: str = ""
+    public_url: str = "https://signcapture-api.onrender.com"
+    enable_observability: bool = True
 
     model_config = SettingsConfigDict(env_file=".env", env_prefix="SIGNCAPTURE_")
 
